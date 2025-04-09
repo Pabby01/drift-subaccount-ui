@@ -1,4 +1,5 @@
 // pages/_app.tsx
+import '../polyfills';
 import '@solana/wallet-adapter-react-ui/styles.css';
 import { AppProps } from 'next/app';
 import { WalletAdapterNetwork } from '@solana/wallet-adapter-base';
@@ -8,7 +9,6 @@ import { PhantomWalletAdapter, SolflareWalletAdapter } from '@solana/wallet-adap
 import { clusterApiUrl } from '@solana/web3.js';
 import { useMemo } from 'react';
 import '../styles/globals.css';
-
 
 function MyApp({ Component, pageProps }: AppProps) {
   // Can be set to 'devnet', 'testnet', or 'mainnet-beta'
@@ -23,7 +23,7 @@ function MyApp({ Component, pageProps }: AppProps) {
       new PhantomWalletAdapter(),
       new SolflareWalletAdapter(),
     ],
-    [network]
+    [] // Removed 'network' from the dependency array since it's not used inside
   );
 
   return (

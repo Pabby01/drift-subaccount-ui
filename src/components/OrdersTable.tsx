@@ -1,6 +1,6 @@
 // components/OrdersTable.tsx
 import { motion } from 'framer-motion';
-import useStore from '../store/useStore';
+
 
 interface Order {
   marketIndex: number;
@@ -24,6 +24,7 @@ export default function OrdersTable({ orders }: OrdersTableProps) {
     3: 'XRP-USD',
     // Add more market names as needed
   };
+  
   
   if (orders.length === 0) {
     return (

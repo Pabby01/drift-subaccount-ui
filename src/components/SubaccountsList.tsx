@@ -1,11 +1,18 @@
 // components/SubaccountsList.tsx
 import { motion } from 'framer-motion';
+import { Position, Order } from '../types';
+
+interface UserAccount {
+  id: string;
+  address?: string;
+  name?: string;
+}
 
 interface SubaccountData {
-  userAccount: any;
+  userAccount: UserAccount;
   balance: number;
-  perpPositions: any[];
-  openOrders: any[];
+  perpPositions: Position[];
+  openOrders: Order[];
 }
 
 interface SubaccountsListProps {
@@ -14,10 +21,10 @@ interface SubaccountsListProps {
   onSelect: (index: number) => void;
 }
 
-export default function SubaccountsList({ 
-  subaccounts, 
-  selectedIndex, 
-  onSelect 
+export default function SubaccountsList({
+  subaccounts,
+  selectedIndex,
+  onSelect
 }: SubaccountsListProps) {
   if (subaccounts.length === 0) {
     return (
@@ -30,7 +37,7 @@ export default function SubaccountsList({
   return (
     <ul className="space-y-2">
       {subaccounts.map((subaccount, index) => (
-        <motion.li 
+        <motion.li
           key={index}
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
@@ -39,7 +46,7 @@ export default function SubaccountsList({
             onClick={() => onSelect(index)}
             className={`w-full text-left p-3 rounded-lg transition ${
               selectedIndex === index 
-                ? 'bg-indigo-100 border-l-4 border-indigo-600' 
+                ? 'bg-indigo-100 border-l-4 border-indigo-600'
                 : 'bg-gray-50 hover:bg-gray-100'
             }`}
           >

@@ -1,7 +1,52 @@
 import type { NextConfig } from "next";
+import path from 'path';
+import webpack from 'webpack'; // Make sure to import webpack
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  reactStrictMode: true,
+  webpack: (config, { isServer }) => {
+    // Only apply these changes for client-side builds
+    if (!isServer) {
+      // Polyfills for Node.js modules in browser
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        os: false,
+        path: false,
+        crypto: require.resolve('crypto-browserify'),
+        stream: require.resolve('stream-browserify'),
+        http: require.resolve('stream-http'),
+        https: require.resolve('https-browserify'),
+        zlib: require.resolve('browserify-zlib'),
+        assert: require.resolve('assert'),
+        process: require.resolve('process/browser'),
+        buffer: require.resolve('buffer/'),
+      };
+
+      // Add buffer to plugins
+      if (!config.plugins) {
+        config.plugins = [];
+      }
+      
+      // Add buffer support with correct 'new' keyword for ProvidePlugin
+      config.plugins.push(
+        new webpack.ProvidePlugin({
+          Buffer: ['buffer', 'Buffer'],
+          process: 'process/browser',
+        })
+      );
+    }
+    
+    return config;
+  },
+  // Add transpilePackages to ensure the Solana packages are correctly processed
+  transpilePackages: [
+    "@coral-xyz/anchor",
+    "@coral-xyz/anchor-30",
+    "@project-serum/anchor",
+    "@drift-labs/sdk",
+    "@openbook-dex/openbook-v2"
+  ],
 };
 
 export default nextConfig;

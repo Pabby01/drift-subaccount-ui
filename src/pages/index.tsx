@@ -3,7 +3,6 @@ import { useState, useEffect } from 'react';
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import { motion } from 'framer-motion';
-import { useRouter } from 'next/router';
 import useStore from '../store/useStore';
 import SubaccountsList from '../components/SubaccountsList';
 import SubaccountDetail from '../components/SubaccountDetail';
@@ -13,12 +12,10 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import { gsap } from 'gsap';
 
 export default function Home() {
-  const router = useRouter();
   const { connection } = useConnection();
   const { publicKey, connected, wallet } = useWallet();
   const { 
     initializeDriftClient, 
-    fetchSubaccounts,
     subaccounts,
     selectedSubaccountIndex,
     setSelectedSubaccountIndex,

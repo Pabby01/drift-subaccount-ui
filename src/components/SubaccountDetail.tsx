@@ -1,17 +1,37 @@
 // components/SubaccountDetail.tsx
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import useStore from '../store/useStore';
 import DepositWithdrawForm from './DepositWithdrawForm';
 import OrderForm from './OrderForm';
 import PositionsTable from './PositionsTable';
 import OrdersTable from './OrdersTable';
 
+// Define your types locally since they're not exported from the table components
+interface Position {
+  baseAssetAmount: number;
+  quoteAssetAmount: number;
+  // Add other position properties you need
+}
+
+interface Order {
+  baseAssetAmount: number;
+  price: number;
+  direction: 'long' | 'short';
+  // Add other order properties you need
+}
+
+// Define user account type only (no collisions with this one)
+interface UserAccount {
+  id: string;
+  address?: string;
+  name?: string;
+}
+
 interface SubaccountData {
-  userAccount: any;
+  userAccount: UserAccount;
   balance: number;
-  perpPositions: any[];
-  openOrders: any[];
+  perpPositions: Position[];
+  openOrders: Order[];
 }
 
 interface SubaccountDetailProps {
