@@ -6,18 +6,26 @@ import OrderForm from './OrderForm';
 import PositionsTable from './PositionsTable';
 import OrdersTable from './OrdersTable';
 
-// Define your types locally since they're not exported from the table components
+// Update these types to match what PositionsTable expects
 interface Position {
+  marketIndex: number;
   baseAssetAmount: number;
   quoteAssetAmount: number;
-  // Add other position properties you need
+  entryPrice: number;
+  breakEvenPrice: number;
+  unrealizedPnl: number;
+  // Add any other position properties needed by PositionsTable
 }
-
+// Update these types to match what OrdersTable expects
 interface Order {
+  marketIndex: number;
+  orderId: number;
   baseAssetAmount: number;
   price: number;
   direction: 'long' | 'short';
-  // Add other order properties you need
+  orderType: string;
+  timestamp: number;
+  // Add any other order properties needed by OrdersTable
 }
 
 // Define user account type only (no collisions with this one)

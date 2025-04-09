@@ -5,24 +5,26 @@ import webpack from 'webpack'; // Make sure to import webpack
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   webpack: (config, { isServer }) => {
-    // Only apply these changes for client-side builds
     if (!isServer) {
-      // Polyfills for Node.js modules in browser
-      config.resolve.fallback = {
-        ...config.resolve.fallback,
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        // Force browser versions
+        'node:fs': false,
+        'node:os': false,
+        'node:path': false,
         fs: false,
         os: false,
-        path: false,
-        crypto: require.resolve('crypto-browserify'),
-        stream: require.resolve('stream-browserify'),
-        http: require.resolve('stream-http'),
-        https: require.resolve('https-browserify'),
-        zlib: require.resolve('browserify-zlib'),
-        assert: require.resolve('assert'),
-        process: require.resolve('process/browser'),
-        buffer: require.resolve('buffer/'),
+        path: require.resolve("path-browserify"),
+        crypto: require.resolve("crypto-browserify"),
+        stream: require.resolve("stream-browserify"),
+        http: require.resolve("stream-http"),
+        https: require.resolve("https-browserify"),
+        zlib: require.resolve("browserify-zlib"),
+        assert: require.resolve("assert"),
+        process: require.resolve("process/browser"),
+        buffer: require.resolve("buffer/"),
       };
-
+    
       // Add buffer to plugins
       if (!config.plugins) {
         config.plugins = [];
