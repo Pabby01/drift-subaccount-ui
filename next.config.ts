@@ -47,7 +47,8 @@ const nextConfig: NextConfig = {
     "@coral-xyz/anchor-30",
     "@project-serum/anchor",
     "@drift-labs/sdk",
-    "@openbook-dex/openbook-v2"
+    "@openbook-dex/openbook-v2",
+    "@solana/spl-token"
   ],
 };
 
