@@ -10,15 +10,10 @@ import WalletLookup from '../components/WalletLookup';
 import Header from '../components/Header';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { gsap } from 'gsap';
-import type { WalletAdapter } from '@solana/wallet-adapter-base';
-import { BN } from '@drift-labs/sdk';
+import { BN, convertToNumber, QUOTE_PRECISION } from '@drift-labs/sdk';
 
 interface ComponentSubaccountData {
-  userAccount: {
-    id: string;
-    address?: string;
-    name?: string;
-  };
+  userAccount: { id: string; address?: string; name?: string };
   balance: number;
   perpPositions: {
     marketIndex: number;
@@ -28,10 +23,10 @@ interface ComponentSubaccountData {
     breakEvenPrice: number;
     unrealizedPnl: number;
     lastCumulativeFundingRate: number;
-    // lastFundingRate?: number; // Removed optional
-    // lastMarkPriceTwap?: number; // Removed optional
-    // lastBidPriceTwap?: number; // Removed optional
-    // lastAskPriceTwap?: number; // Removed optional
+    lastFundingRate: number;
+    lastMarkPriceTwap: number;
+    lastBidPriceTwap: number;
+    lastAskPriceTwap: number;
   }[];
   openOrders: {
     marketIndex: number;
@@ -44,116 +39,125 @@ interface ComponentSubaccountData {
   }[];
 }
 
-interface PerpPosition {
-  marketIndex: number;
-  baseAssetAmount: BN;
-  quoteAssetAmount: BN;
-  quoteEntryAmount: BN;
-  lastCumulativeFundingRate: BN;
-  lastMarkPriceTwap: BN;
-  lastFundingRate: BN; // Add this property to the interface
-  lastBidPriceTwap: BN; // Add this property
-  lastAskPriceTwap: BN; // Add this property
-}
-
 export default function Home() {
   const { connection } = useConnection();
   const { publicKey, connected, wallet } = useWallet();
   const {
     initializeDriftClient,
+    driftClient,              // now available from store
     subaccounts,
     selectedSubaccountIndex,
     setSelectedSubaccountIndex,
     isLoading,
-    error
+    error,
   } = useStore();
 
   const [walletQuery, setWalletQuery] = useState('');
 
   useEffect(() => {
     if (connected && wallet && publicKey) {
-      initializeDriftClient(wallet.adapter as WalletAdapter, connection);
+      if ('signTransaction' in wallet.adapter) {
+        initializeDriftClient(wallet.adapter, connection);
+      } else {
+        console.error('The connected wallet does not support transaction signing.');
+      }
     }
   }, [connected, wallet, publicKey, connection, initializeDriftClient]);
+  
 
   useEffect(() => {
     const ctx = gsap.context(() => {
-      gsap.from(".page-content", {
+      gsap.from('.page-content', {
         duration: 0.8,
         opacity: 0,
         y: 20,
-        ease: "power2.out",
-        stagger: 0.1
+        ease: 'power2.out',
+        stagger: 0.1,
       });
     });
     return () => ctx.revert();
   }, []);
 
   const handleQueryWallet = async (walletAddress: string) => {
-    console.log("Looking up wallet:", walletAddress);
+    console.log('Looking up wallet:', walletAddress);
+    // e.g. await lookupWallet(walletAddress);
   };
 
-  const calculatePositionMetrics = (position: PerpPosition) => {
-    const baseAmount = position.baseAssetAmount.toNumber();
-    const quoteEntry = position.quoteEntryAmount.toNumber();
-    const markPrice = position.lastMarkPriceTwap.toNumber();
-    const fundingRate = position.lastCumulativeFundingRate.toNumber();
+  const calculatePositionMetrics = (
+    baseAssetAmount: BN,
+    quoteEntryAmount: BN,
+    lastCumulativeFundingRate: BN,
+    markPriceBN: BN
+  ) => {
+    const baseAmount = baseAssetAmount.toNumber();
+    const quoteEntry = quoteEntryAmount.toNumber();
+    const markPrice = markPriceBN.toNumber();
+    const fundingRate = lastCumulativeFundingRate.toNumber();
 
     const entryPrice = baseAmount === 0 ? 0 : quoteEntry / Math.abs(baseAmount);
-    const breakEvenPrice = baseAmount === 0 ? 0 :
-      (quoteEntry + fundingRate) / Math.abs(baseAmount);
+    const breakEvenPrice =
+      baseAmount === 0 ? 0 : (quoteEntry + fundingRate) / Math.abs(baseAmount);
     const unrealizedPnl = baseAmount * (markPrice - entryPrice);
 
-    return {
-      entryPrice,
-      breakEvenPrice,
-      unrealizedPnl
-    };
+    return { entryPrice, breakEvenPrice, unrealizedPnl };
   };
 
-  const componentSubaccounts: ComponentSubaccountData[] = subaccounts.map(sub => ({
-    userAccount: {
-      id: sub.userAccountPublicKey.toString(),
-      address: sub.userAccountPublicKey.toString(),
-    },
-    balance: sub.balance,
-    perpPositions: sub.perpPositions.map(pos => {
-      const { entryPrice, breakEvenPrice, unrealizedPnl } = calculatePositionMetrics({
-        marketIndex: pos.marketIndex,
-        baseAssetAmount: pos.baseAssetAmount,
-        quoteAssetAmount: pos.quoteAssetAmount,
-        quoteEntryAmount: pos.quoteEntryAmount,
-        lastCumulativeFundingRate: pos.lastCumulativeFundingRate,
-        lastMarkPriceTwap: undefined,
-        lastFundingRate: undefined,
-        lastBidPriceTwap: undefined,
-        lastAskPriceTwap: undefined
-      });
+  const componentSubaccounts: ComponentSubaccountData[] = subaccounts.map((sub) => {
+    // 1) Compute USDC balance (token index 0)
+    const usdcBn = sub.getTokenAmount(0);
+    const balance = convertToNumber(usdcBn, QUOTE_PRECISION);
 
-      return {
-        marketIndex: pos.marketIndex,
-        baseAssetAmount: pos.baseAssetAmount.toNumber(),
-        quoteAssetAmount: pos.quoteAssetAmount.toNumber(),
-        entryPrice,
-        breakEvenPrice,
-        unrealizedPnl,
-        lastCumulativeFundingRate: pos.lastCumulativeFundingRate.toNumber(),
-        // lastFundingRate: pos.lastFundingRate ? pos.lastFundingRate.toNumber() : 0, // Handle potential undefined
-        // lastMarkPriceTwap: pos.lastMarkPriceTwap ? pos.lastMarkPriceTwap.toNumber() : 0, // Handle potential undefined
-        // lastBidPriceTwap: pos.lastBidPriceTwap ? pos.lastBidPriceTwap.toNumber() : 0, // Handle potential undefined
-        // lastAskPriceTwap: pos.lastAskPriceTwap ? pos.lastAskPriceTwap.toNumber() : 0 // Handle potential undefined
-      };
-    }),
-    openOrders: sub.openOrders.map(order => ({
-      marketIndex: order.marketIndex,
-      orderId: order.orderId,
-      baseAssetAmount: order.baseAssetAmount.toNumber(),
-      price: order.price.toNumber(),
-      direction: order.direction === 1 ? 'long' : 'short',
-      orderType: order.orderType.toString(),
-      timestamp: order.slot.toNumber(),
-    })),
-  }));
+    return {
+      userAccount: {
+        id: sub.getUserAccountPublicKey().toString(),
+        address: sub.getUserAccountPublicKey().toString(),
+      },
+      balance,
+      perpPositions: sub.getActivePerpPositions().map((pos) => {
+        if (!driftClient) {
+          throw new Error('Drift client not initialized');
+        }
+        // 2) Grab the perp‑market account (must exist after subscribe) :contentReference[oaicite:0]{index=0}
+        const marketAccount = driftClient.getPerpMarketAccount(pos.marketIndex)!; // assert non-null :contentReference[oaicite:1]{index=1}
+
+        const markPriceBN = marketAccount.amm.lastMarkPriceTwap;
+        const lastFundingRateBN = marketAccount.amm.lastFundingRate;
+        const lastBidPriceTwapBN = marketAccount.amm.lastBidPriceTwap;
+        const lastAskPriceTwapBN = marketAccount.amm.lastAskPriceTwap;
+
+        const { entryPrice, breakEvenPrice, unrealizedPnl } =
+          calculatePositionMetrics(
+            pos.baseAssetAmount,
+            pos.quoteEntryAmount,
+            pos.lastCumulativeFundingRate,
+            markPriceBN
+          );
+
+        return {
+          marketIndex: pos.marketIndex,
+          baseAssetAmount: pos.baseAssetAmount.toNumber(),
+          quoteAssetAmount: pos.quoteAssetAmount.toNumber(),
+          entryPrice,
+          breakEvenPrice,
+          unrealizedPnl,
+          lastCumulativeFundingRate: pos.lastCumulativeFundingRate.toNumber(),
+          lastFundingRate: lastFundingRateBN.toNumber(),
+          lastMarkPriceTwap: markPriceBN.toNumber(),
+          lastBidPriceTwap: lastBidPriceTwapBN.toNumber(),
+          lastAskPriceTwap: lastAskPriceTwapBN.toNumber(),
+        };
+      }),
+      openOrders: sub.getOpenOrders().map((order) => ({
+        marketIndex: order.marketIndex,
+        orderId: order.orderId,
+        baseAssetAmount: order.baseAssetAmount.toNumber(),
+        price: order.price.toNumber(),
+        direction: order.direction === 1 ? 'long' : 'short',
+        orderType: order.orderType.toString(),
+        timestamp: order.slot.toNumber(),
+      })),
+    };
+  });
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -174,7 +178,10 @@ export default function Home() {
 
             {connected && (
               <div className="mt-4 text-center">
-                <p className="text-green-600">Connected: {publicKey?.toString().slice(0, 6)}...{publicKey?.toString().slice(-4)}</p>
+                <p className="text-green-600">
+                  Connected: {publicKey?.toString().slice(0, 6)}...
+                  {publicKey?.toString().slice(-4)}
+                </p>
               </div>
             )}
 
@@ -213,7 +220,9 @@ export default function Home() {
                 <div className="md:col-span-2 bg-white rounded-lg shadow-md p-6">
                   <h2 className="text-xl font-semibold mb-4">Account Details</h2>
                   {componentSubaccounts.length > 0 ? (
-                    <SubaccountDetail subaccount={componentSubaccounts[selectedSubaccountIndex]} />
+                    <SubaccountDetail
+                      subaccount={componentSubaccounts[selectedSubaccountIndex]}
+                    />
                   ) : (
                     <p>No subaccounts found for this wallet.</p>
                   )}
@@ -221,13 +230,18 @@ export default function Home() {
               </div>
             ) : (
               <div className="bg-white rounded-lg shadow-md p-6 text-center">
-                <h2 className="text-xl font-semibold mb-4">Welcome to Drift Subaccounts</h2>
-                <p className="mb-4">Connect your wallet to view your subaccounts, balances, and positions.</p>
+                <h2 className="text-xl font-semibold mb-4">
+                  Welcome to Drift Subaccounts
+                </h2>
+                <p className="mb-4">
+                  Connect your wallet to view your subaccounts, balances, and positions.
+                </p>
               </div>
             )}
           </motion.div>
         </div>
       </main>
     </div>
+
   );
 }
